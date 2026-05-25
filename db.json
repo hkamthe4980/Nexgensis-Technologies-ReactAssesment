@@ -1,0 +1,60 @@
+{
+  "books": [
+    {
+      "id": "1",
+      "title": "To Kill a Mockingbird",
+      "author": "Harper Lee",
+      "genre": "Fiction",
+      "year": "1960"
+    },
+    {
+      "id": "2",
+      "title": "1984",
+      "author": "George Orwell",
+      "genre": "Dystopian",
+      "year": "1949"
+    },
+    {
+      "id": "3",
+      "title": "The Great Gatsby",
+      "author": "F. Scott Fitzgerald",
+      "genre": "Fiction",
+      "year": "1925"
+    },
+    {
+      "id": "4",
+      "title": "Dune",
+      "author": "Frank Herbert",
+      "genre": "Sci-Fi",
+      "year": "1965"
+    },
+    {
+      "id": "5",
+      "title": "The Hobbit",
+      "author": "J.R.R. Tolkien",
+      "genre": "Fantasy",
+      "year": "1937"
+    },
+    {
+      "id": "6",
+      "title": "Educated",
+      "author": "Tara Westover",
+      "genre": "Biography",
+      "year": "2018"
+    },
+    {
+      "id": "7",
+      "title": "The Silent Patient",
+      "author": "Alex Michaelides",
+      "genre": "Mystery",
+      "year": "2019"
+    },
+    {
+      "id": "8",
+      "title": "Sapiens: A Brief History of Humankind",
+      "author": "Yuval Noah Harari",
+      "genre": "History",
+      "year": "2011"
+    }
+  ]
+}

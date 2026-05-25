@@ -1,0 +1,141 @@
+/* Import modern Plus Jakarta Sans font */
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+
+:root {
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  color-scheme: light;
+  background-color: #f8fafc;
+}
+
+body {
+  margin: 0;
+  background-color: #f8fafc;
+  color: #334155;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Reset Vite defaults that block layout width */
+#root {
+  width: 100% !important;
+  max-width: 100% !important;
+  margin: 0 !important;
+  text-align: left !important;
+  border-inline: none !important;
+  min-height: 100vh;
+  box-sizing: border-box;
+}
+
+/* Premium Card and Micro-Animations */
+.hover-lift {
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.hover-lift:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.08) !important;
+}
+
+/* Elegant line clamp for long titles */
+.text-truncate-2-lines {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  height: 3rem;
+  line-height: 1.5rem;
+}
+
+/* Specialized Badge Color (Dystopian) */
+.bg-purple-subtle {
+  background-color: rgba(139, 92, 246, 0.1) !important;
+  color: #7c3aed !important;
+}
+.text-purple {
+  color: #7c3aed !important;
+}
+.border-purple-subtle {
+  border-color: rgba(139, 92, 246, 0.2) !important;
+}
+
+/* Pulse animation for database badge */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(0.92);
+  }
+}
+
+.animate-pulse {
+  animation: pulse 2s infinite ease-in-out;
+}
+
+/* Font sizes */
+.fs-xs {
+  font-size: 0.75rem;
+}
+
+/* Shimmer Loading Skeleton Classes */
+.skeleton-card {
+  position: relative;
+  overflow: hidden;
+  border: none;
+}
+
+.skeleton-card::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  transform: translateX(-100%);
+  background-image: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.6) 20%,
+    rgba(255, 255, 255, 0.6) 60%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  animation: shimmer 1.6s infinite;
+}
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.skeleton-text {
+  background-color: #e2e8f0;
+  border-radius: 4px;
+}
+
+.skeleton-badge {
+  height: 22px;
+  width: 70px;
+}
+
+.skeleton-title {
+  height: 20px;
+}
+
+.skeleton-author {
+  height: 16px;
+}
+
+.skeleton-button {
+  height: 31px;
+  background-color: #cbd5e1;
+  border-radius: 4px;
+}
+
+/* Form focus polish */
+.form-control:focus, .form-select:focus {
+  border-color: #86b7fe;
+  box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.15);
+}
