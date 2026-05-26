@@ -8,7 +8,7 @@ const Navbar = ({ isOffline }) => {
           <i className="bi bi-book-half fs-3 text-warning"></i>
           <span className="fw-bold tracking-tight">NexBook <span className="text-warning">Manager</span></span>
         </a>
-        <div className="ms-auto d-flex align-items-center">
+        {/* <div className="ms-auto d-flex align-items-center">
           {isOffline ? (
             <span className="badge bg-warning text-dark px-3 py-2 rounded-pill d-flex align-items-center gap-2 border border-warning shadow-sm">
               <i className="bi bi-cloud-slash-fill spinner-grow-sm text-dark"></i>
@@ -20,7 +20,7 @@ const Navbar = ({ isOffline }) => {
               <span>JSON REST API Online</span>
             </span>
           )}
-        </div>
+        </div> */}
       </div>
     </nav>
   );

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap-icons/font/bootstrap-icons.css';
 
@@ -6,56 +7,86 @@ import Navbar from './components/Navbar';
 import FilterBar from './components/FilterBar';
 import BookList from './components/BookList';
 import BookFormModal from './components/BookFormModal';
-import { bookApi, databaseStatus } from './services/api';
+
+// Local json-server address
+const API_URL = 'http://localhost:5001/books';
+
+// Simple seed data in case database is offline (fallback)
+const INITIAL_BOOKS = [
+  { id: "1", title: "To Kill a Mockingbird", author: "Harper Lee", genre: "Fiction", year: "1960" },
+  { id: "2", title: "1984", author: "George Orwell", genre: "Dystopian", year: "1949" },
+  { id: "3", title: "The Great Gatsby", author: "F. Scott Fitzgerald", genre: "Fiction", year: "1925" },
+  { id: "4", title: "Dune", author: "Frank Herbert", genre: "Sci-Fi", year: "1965" },
+  { id: "5", title: "The Hobbit", author: "J.R.R. Tolkien", genre: "Fantasy", year: "1937" },
+  { id: "6", title: "Educated", author: "Tara Westover", genre: "Biography", year: "2018" },
+  { id: "7", title: "The Silent Patient", author: "Alex Michaelides", genre: "Mystery", year: "2019" },
+  { id: "8", title: "Sapiens: A Brief History of Humankind", author: "Yuval Noah Harari", genre: "History", year: "2011" }
+];
 
 function App() {
   const [books, setBooks] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [isOffline, setIsOffline] = useState(false);
 
-  // Filter & Sort state
+  // Search, Genre, and Sorting states
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedGenre, setSelectedGenre] = useState('All');
   const [sortBy, setSortBy] = useState('title-asc');
 
-  // Modal control
+  // Modal open/close states
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [activeBook, setActiveBook] = useState(null);
 
-  // Success alert/toast message
+  // Success message alert
   const [alertMessage, setAlertMessage] = useState(null);
 
-  // Load books on mount
-  useEffect(() => {
-    fetchBooks();
-  }, []);
-
-  const fetchBooks = async (showSkeleton = true) => {
-    if (showSkeleton) setLoading(true);
-    setError(null);
-    try {
-      // Simulate brief network latency for shimmering skeletons appreciation
-      const [, result] = await Promise.all([
-        new Promise((resolve) => setTimeout(resolve, 600)),
-        bookApi.getAll()
-      ]);
-      setBooks(result.data);
-      setIsOffline(databaseStatus.isOffline());
-    } catch (err) {
-      console.error(err);
-      setError('Failed to fetch books. Please try reloading the application.');
-    } finally {
-      setLoading(false);
+  // Helper to load books from localStorage if the server fails
+  const getLocalStorageBooks = () => {
+    const local = localStorage.getItem('books_db');
+    if (!local) {
+      localStorage.setItem('books_db', JSON.stringify(INITIAL_BOOKS));
+      return INITIAL_BOOKS;
     }
+    return JSON.parse(local);
   };
 
-  // Triggers alert with auto-fadeout
-  const showAlert = (message, type = 'success') => {
-    setAlertMessage({ message, type });
+  // Helper to save books to localStorage
+  const saveLocalStorageBooks = (updatedBooks) => {
+    localStorage.setItem('books_db', JSON.stringify(updatedBooks));
+  };
+
+  // Load books from JSON Server or LocalStorage fallback
+  const fetchBooks = () => {
+    setLoading(true);
+    axios.get(API_URL)
+      .then((response) => {
+        setBooks(response.data);
+        setIsOffline(false);
+        setLoading(false);
+      })
+      .catch((error) => {
+        console.warn('JSON server offline! Falling back to LocalStorage.', error);
+        setBooks(getLocalStorageBooks());
+        setIsOffline(true);
+        setLoading(false);
+      });
+  };
+
+  // Run on start
+  useEffect(() => {
+    // Artificial 500ms delay so the beautiful skeleton cards can be appreciated
+    const timer = setTimeout(() => {
+      fetchBooks();
+    }, 500);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Helper for floating alerts
+  const showAlert = (message) => {
+    setAlertMessage(message);
     setTimeout(() => {
       setAlertMessage(null);
-    }, 4000);
+    }, 3000);
   };
 
   const handleOpenAddModal = () => {
@@ -73,43 +104,71 @@ function App() {
     setActiveBook(null);
   };
 
-  const handleSaveBook = async (formData) => {
-    try {
-      if (activeBook) {
-        // Edit mode
-        await bookApi.update(activeBook.id, formData);
-        showAlert(`Successfully updated "${formData.title}"!`);
-      } else {
-        // Add mode
-        await bookApi.create(formData);
-        showAlert(`Successfully added "${formData.title}" to the library!`);
-      }
-      handleCloseModal();
-      // Fast refresh books without full skeleton flash for smooth workflow
-      fetchBooks(false);
-    } catch (err) {
-      console.error(err);
-      showAlert('An error occurred while saving the book.', 'danger');
+  // Unified Save (handles both Add and Edit)
+  const handleSaveBook = (formData) => {
+    if (activeBook) {
+      // 1. UPDATE EXISTING BOOK (Edit Mode)
+      const updatedBook = { ...formData, id: activeBook.id };
+
+      axios.put(`${API_URL}/${activeBook.id}`, updatedBook)
+        .then(() => {
+          showAlert(`Successfully updated "${formData.title}"!`);
+          fetchBooks();
+          handleCloseModal();
+        })
+        .catch(() => {
+          // Offline fallback
+          const localList = getLocalStorageBooks();
+          const newList = localList.map((b) => b.id.toString() === activeBook.id.toString() ? updatedBook : b);
+          saveLocalStorageBooks(newList);
+          
+          showAlert(`Updated "${formData.title}" (Local Storage Saved)!`);
+          fetchBooks();
+          handleCloseModal();
+        });
+    } else {
+      // 2. CREATE NEW BOOK (Add Mode)
+      const newBook = { ...formData, id: Date.now().toString() };
+
+      axios.post(API_URL, newBook)
+        .then(() => {
+          showAlert(`Successfully added "${formData.title}"!`);
+          fetchBooks();
+          handleCloseModal();
+        })
+        .catch(() => {
+          // Offline fallback
+          const localList = getLocalStorageBooks();
+          localList.push(newBook);
+          saveLocalStorageBooks(localList);
+
+          showAlert(`Added "${formData.title}" (Local Storage Saved)!`);
+          fetchBooks();
+          handleCloseModal();
+        });
     }
   };
 
-  const handleDeleteBook = async (id) => {
+  // Delete Book handler
+  const handleDeleteBook = (id) => {
     const bookToDelete = books.find((b) => b.id.toString() === id.toString());
     if (!bookToDelete) return;
 
-    const confirmDelete = window.confirm(
-      `Are you sure you want to delete "${bookToDelete.title}" by ${bookToDelete.author}?`
-    );
+    if (window.confirm(`Are you sure you want to delete "${bookToDelete.title}"?`)) {
+      axios.delete(`${API_URL}/${id}`)
+        .then(() => {
+          showAlert(`Removed "${bookToDelete.title}" from library.`);
+          fetchBooks();
+        })
+        .catch(() => {
+          // Offline fallback
+          const localList = getLocalStorageBooks();
+          const newList = localList.filter((b) => b.id.toString() !== id.toString());
+          saveLocalStorageBooks(newList);
 
-    if (confirmDelete) {
-      try {
-        await bookApi.delete(id);
-        showAlert(`Removed "${bookToDelete.title}" from the system.`);
-        fetchBooks(false);
-      } catch (err) {
-        console.error(err);
-        showAlert('Failed to delete the book.', 'danger');
-      }
+          showAlert(`Removed "${bookToDelete.title}" (Local Storage Updated).`);
+          fetchBooks();
+        });
     }
   };
 
@@ -119,16 +178,15 @@ function App() {
     setSortBy('title-asc');
   };
 
-  // Compute list of unique genres dynamically based on actual database books
+  // Get list of unique genres from the current books
   const uniqueGenres = [...new Set(books.map((b) => b.genre))].filter(Boolean).sort();
 
-  // In-memory Filtering and Sorting for high response speed
+  // Filter and sort logic (instant responsiveness)
   const filteredAndSortedBooks = books
     .filter((book) => {
-      const query = searchQuery.toLowerCase().trim();
       const matchesSearch =
-        book.title.toLowerCase().includes(query) ||
-        book.author.toLowerCase().includes(query);
+        book.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        book.author.toLowerCase().includes(searchQuery.toLowerCase());
 
       const matchesGenre =
         selectedGenre === 'All' || book.genre === selectedGenre;
@@ -143,74 +201,54 @@ function App() {
         return b.title.localeCompare(a.title);
       }
       if (sortBy === 'year-desc') {
-        return parseInt(b.year, 10) - parseInt(a.year, 10);
+        return parseInt(b.year) - parseInt(a.year);
       }
       if (sortBy === 'year-asc') {
-        return parseInt(a.year, 10) - parseInt(b.year, 10);
+        return parseInt(a.year) - parseInt(b.year);
       }
       return 0;
     });
 
   return (
     <div className="min-vh-100 bg-light pb-5">
-      {/* Header / Navbar */}
+      {/* Navbar with connection status */}
       <Navbar isOffline={isOffline} />
 
-      {/* Main Content Area */}
       <div className="container">
         
-        {/* Persistent alerts */}
+        {/* Floating alerts */}
         {alertMessage && (
-          <div className={`alert alert-${alertMessage.type} alert-dismissible fade show shadow-sm border-0 mb-4 d-flex align-items-center gap-2`} role="alert">
-            <i className={`bi ${alertMessage.type === 'danger' ? 'bi-exclamation-triangle-fill' : 'bi-check-circle-fill'} fs-5`}></i>
-            <div className="fw-semibold">{alertMessage.message}</div>
-            <button type="button" className="btn-close ms-auto shadow-none" onClick={() => setAlertMessage(null)} aria-label="Close"></button>
+          <div className="alert alert-success alert-dismissible fade show shadow-sm border-0 mb-4 d-flex align-items-center gap-2" role="alert">
+            <i className="bi bi-check-circle-fill fs-5"></i>
+            <div className="fw-semibold">{alertMessage}</div>
+            <button type="button" className="btn-close ms-auto shadow-none" onClick={() => setAlertMessage(null)}></button>
           </div>
         )}
 
-        {/* Global Error Banner */}
-        {error && (
-          <div className="alert alert-danger shadow-sm border-0 mb-4 p-4" role="alert">
-            <h4 className="alert-heading fw-bold">
-              <i className="bi bi-x-circle-fill me-2"></i>
-              System Error
-            </h4>
-            <p className="mb-0">{error}</p>
-            <button className="btn btn-outline-danger mt-3" onClick={() => fetchBooks()}>
-              <i className="bi bi-arrow-clockwise me-2"></i>
-              Retry Fetching
-            </button>
-          </div>
-        )}
+        {/* Toolbar & Filter Bar */}
+        <FilterBar
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+          selectedGenre={selectedGenre}
+          setSelectedGenre={setSelectedGenre}
+          sortBy={sortBy}
+          setSortBy={setSortBy}
+          genres={uniqueGenres}
+          onAddClick={handleOpenAddModal}
+        />
 
-        {/* Toolbar & Filters (Only show if no major connection error) */}
-        {!error && (
-          <>
-            <FilterBar
-              searchQuery={searchQuery}
-              setSearchQuery={setSearchQuery}
-              selectedGenre={selectedGenre}
-              setSelectedGenre={setSelectedGenre}
-              sortBy={sortBy}
-              setSortBy={setSortBy}
-              genres={uniqueGenres}
-              onAddClick={handleOpenAddModal}
-            />
-
-            {/* Core Book List Grid */}
-            <BookList
-              books={filteredAndSortedBooks}
-              loading={loading}
-              onEdit={handleOpenEditModal}
-              onDelete={handleDeleteBook}
-              onClearFilters={handleClearFilters}
-            />
-          </>
-        )}
+        {/* Main Grid View */}
+        <BookList
+          books={filteredAndSortedBooks}
+          loading={loading}
+          onEdit={handleOpenEditModal}
+          onDelete={handleDeleteBook}
+          onClearFilters={handleClearFilters}
+        />
 
       </div>
 
-      {/* Add / Edit Form Modal Dialog */}
+      {/* Add / Edit Form Modal */}
       <BookFormModal
         isOpen={isModalOpen}
         onClose={handleCloseModal}
